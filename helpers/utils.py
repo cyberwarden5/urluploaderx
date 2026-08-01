@@ -236,9 +236,9 @@ async def get_system_status() -> dict[str, Any]:
         cpu_count = psutil.cpu_count(logical=True)
         ram = psutil.virtual_memory()
         swap = psutil.swap_memory()
-        try:
+        if platform.system() == "Windows":
             drive = os.getenv("SystemDrive", "C:") + os.sep
-        except Exception:
+        else:
             drive = "/"
         disk = psutil.disk_usage(drive)
         # Count cached download files
