@@ -13,11 +13,8 @@ If you are setting up the repository for the first time, run these commands insi
 git init
 
 # Configure user identification details (replace with yours)
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-
-# Create a standard .gitignore to avoid pushing API tokens and logs
-# Make sure .env, data/, downloads/, temp/, and *.log are inside it
+git config --global user.name "Aftab Kabir"
+git config --global user.email "aftab.kabir@example.com"
 ```
 
 Create a `.gitignore` file (if not already present):
@@ -48,7 +45,7 @@ git commit -m "feat: initial commit for production-ready bot"
 git branch -M main
 
 # Link local repository to your remote Git URL
-git remote add origin https://github.com/your-username/your-repo.git
+git remote add origin https://github.com/cyberwarden5/urluploaderx.git
 
 # Force-push initial commit to remote main branch
 git push -u origin main

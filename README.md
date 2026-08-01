@@ -1,10 +1,10 @@
 <h1 align="center">🚀 URLUploader Telegram Bot</h1>
 
 <p align="center">
-  <a href="https://github.com/bisnuray/URLUploader/stargazers"><img src="https://img.shields.io/github/stars/bisnuray/URLUploader?color=blue&style=flat" alt="GitHub Repo stars"></a>
-  <a href="https://github.com/bisnuray/URLUploader/issues"><img src="https://img.shields.io/github/issues/bisnuray/URLUploader" alt="GitHub issues"></a>
-  <a href="https://github.com/bisnuray/URLUploader/pulls"><img src="https://img.shields.io/github/issues-pr/bisnuray/URLUploader" alt="GitHub pull requests"></a>
-  <a href="https://github.com/bisnuray/URLUploader/graphs/contributors"><img src="https://img.shields.io/github/contributors/bisnuray/URLUploader?style=flat" alt="GitHub contributors"></a>
+  <a href="https://github.com/cyberwarden5/urluploaderx/stargazers"><img src="https://img.shields.io/github/stars/cyberwarden5/urluploaderx?color=blue&style=flat" alt="GitHub Repo stars"></a>
+  <a href="https://github.com/cyberwarden5/urluploaderx/issues"><img src="https://img.shields.io/github/issues/cyberwarden5/urluploaderx" alt="GitHub issues"></a>
+  <a href="https://github.com/cyberwarden5/urluploaderx/pulls"><img src="https://img.shields.io/github/issues-pr/cyberwarden5/urluploaderx" alt="GitHub pull requests"></a>
+  <a href="https://github.com/cyberwarden5/urluploaderx/graphs/contributors"><img src="https://img.shields.io/github/contributors/cyberwarden5/urluploaderx?style=flat" alt="GitHub contributors"></a>
 </p>
 
 <p align="center">
@@ -15,10 +15,12 @@
 ## ✨ Key Features
 
 - 📥 **Direct URL Upload:** Download direct HTTP/HTTPS files (up to 4GB) and upload directly to Telegram as Video or Document.
-- 🎬 **Video Screenshot Generator (`/ss`):** Extract timestamped video screenshot frames (default 10) and generate an aesthetic grid collage from video files or video URLs!
+- 🎬 **Video Screenshot Generator (`/ss`):** Extract video screenshot frames and generate an aesthetic grid collage from video files or video URLs!
 - 👤 **Automatic User Registration:** Persistent JSON storage in `data/users.json` tracking all bot users.
+- 📂 **File Manager (`/files`):** Interactive paginated browser for the owner to view details (creation date, user ID), send files directly, or delete them.
+- 💾 **Database Separation:** Clean architecture separating `data/users.json` and `data/downloads.json` to store registry information and transaction logs safely.
 - 📜 **Log Channel Integration:** Automatically logs all user activities, commands, registrations, and errors to your private Telegram `LOG_CHANNEL`.
-- 💻 **Owner Dashboard (`/status`):** View real-time system performance (CPU %, RAM, Storage, Bot Uptime, and Ping latency).
+- 💻 **Owner Dashboard (`/status` & `/ping`):** View real-time system performance (CPU %, RAM, Storage, Bot Uptime, and Ping latency).
 - ⚡ **Multi-threaded Performance:** Asynchronous media handling and throttled progress bars to avoid Telegram flood limits.
 - ✏️ **File Renaming:** Rename any file prior to downloading and uploading.
 
@@ -32,13 +34,14 @@ pip install -r requirements.txt
 ```
 
 ### 2. Configure `.env`
-Create a `.env` file in the root folder:
+Create a `.env` file in the root folder (see `.env.example`):
 ```env
 API_ID=28271744
 API_HASH=1df4d2b4dc77dc5fd65622f9d8f6814d
-BOT_TOKEN=your_bot_token_here
+BOT_TOKEN=8075052119:AAFEE8meQKG3Ncp8mj-nu7HbIC841rlg-Rg
 OWNER_ID=7647902709
 LOG_CHANNEL=-1003336496391
+PREMIUM_LIMIT=5
 ```
 
 ### 3. Start Bot
@@ -72,5 +75,5 @@ python main.py
 
 ## 👥 Author & Credits
 
-- **Name:** Bisnu Ray
-- **Telegram Channel:** [@itsSmartDev](https://t.me/itsSmartDev)
+- **Name:** Aftab Kabir
+- **Telegram Channel:** [@AftabKabir](https://t.me/@AftabKabir)

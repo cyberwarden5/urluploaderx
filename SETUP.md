@@ -17,8 +17,8 @@ This guide details how to configure, run, and deploy the high-performance **URL 
 
 ```bash
 # Clone repository
-git clone https://github.com/bisnuray/URLUploader.git
-cd URLUploader
+git clone https://github.com/cyberwarden5/urluploaderx.git
+cd urluploaderx
 
 # (Optional) Create virtual environment
 python -m venv venv
@@ -44,6 +44,7 @@ BOT_TOKEN=8075052119:AAFEE8meQKG3Ncp8mj-nu7HbIC841rlg-Rg
 OWNER_ID=7647902709
 LOG_CHANNEL=-1003336496391
 MAX_FILE_SIZE=4294967296
+PREMIUM_LIMIT=5
 ```
 
 ---
@@ -133,8 +134,8 @@ Creating a systemd service is the most resilient approach as it automatically re
    [Service]
    Type=simple
    User=root
-   WorkingDirectory=/root/URLUploader
-   ExecStart=/root/URLUploader/venv/bin/python main.py
+   WorkingDirectory=/root/urluploaderx
+   ExecStart=/root/urluploaderx/venv/bin/python main.py
    Restart=always
    RestartSec=3
 
@@ -153,3 +154,10 @@ Creating a systemd service is the most resilient approach as it automatically re
    ```bash
    sudo journalctl -u urluploader -f -n 50
    ```
+
+---
+
+## 👥 Author & Credits
+
+- **Name:** Aftab Kabir
+- **Telegram Channel:** [@AftabKabir](https://t.me/@AftabKabir)
