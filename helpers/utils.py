@@ -241,6 +241,13 @@ async def get_system_status() -> dict[str, Any]:
         else:
             drive = "/"
         disk = psutil.disk_usage(drive)
+        cpu_physical = psutil.cpu_count(logical=False) or 1
+        cpu_logical = psutil.cpu_count(logical=True) or 1
+        ram_free = file_size_format(ram.available)
+        disk_free = file_size_format(disk.free)
+        os_name = platform.system()
+        os_version = platform.release()
+
         # Count cached download files
         dl_count = 0
         if os.path.isdir(DOWNLOAD_DIR):
@@ -250,17 +257,21 @@ async def get_system_status() -> dict[str, Any]:
                 pass
         return {
             "cpu": cpu,
-            "cpu_count": cpu_count,
+            "cpu_physical": cpu_physical,
+            "cpu_logical": cpu_logical,
             "ram_usage": ram.percent,
             "ram_used": file_size_format(ram.used),
+            "ram_free": ram_free,
             "ram_total": file_size_format(ram.total),
             "swap_usage": f"{swap.percent}% ({file_size_format(swap.used)} / {file_size_format(swap.total)})" if swap.total else "N/A",
             "disk_usage": disk.percent,
             "disk_used": file_size_format(disk.used),
+            "disk_free": disk_free,
             "disk_total": file_size_format(disk.total),
             "download_count": dl_count,
             "python": platform.python_version(),
-            "platform": platform.system(),
+            "platform": os_name,
+            "os_version": os_version,
         }
 
     return await asyncio.get_event_loop().run_in_executor(None, _collect)

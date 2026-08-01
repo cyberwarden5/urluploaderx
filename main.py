@@ -333,18 +333,21 @@ async def status_command(client: Client, message: Message):
         f"│  🔹 <b>Uptime:</b>     <code>{uptime_str}</code>\n"
         f"└────────────────────────────────────┘\n\n"
         f"┌────────────── <b>SYSTEM</b> ──────────────┐\n"
-        f"│  💻 <b>OS:</b>         <code>{stats.get('platform', 'N/A')}</code>\n"
+        f"│  💻 <b>OS Name:</b>    <code>{stats.get('platform', 'N/A')}</code>\n"
+        f"│  💻 <b>OS Version:</b> <code>{stats.get('os_version', 'N/A')}</code>\n"
         f"│  ⚙️ <b>Python:</b>     <code>{stats.get('python', 'N/A')}</code>\n"
-        f"│  🔌 <b>CPU Cores:</b>  <code>{stats.get('cpu_count', 'N/A')}</code>\n"
+        f"│  🔌 <b>CPU Cores:</b>  <code>Phys: {stats.get('cpu_physical', 1)} | Log: {stats.get('cpu_logical', 1)}</code>\n"
         f"│  💻 <b>CPU Usage:</b>  <code>{stats['cpu']}%</code>\n"
         f"└────────────────────────────────────┘\n\n"
         f"┌────────────── <b>MEMORY</b> ─────────────┐\n"
         f"│  🧠 <b>RAM Usage:</b>  <code>{stats['ram_usage']}%</code>\n"
+        f"│  📊 <b>RAM Free:</b>   <code>{stats.get('ram_free', 'N/A')}</code>\n"
         f"│  📊 <b>RAM Used:</b>   <code>{stats['ram_used']}</code> / <code>{stats['ram_total']}</code>\n"
         f"│  📊 <b>Swap:</b>       <code>{stats.get('swap_usage', 'N/A')}</code>\n"
         f"└────────────────────────────────────┘\n\n"
         f"┌────────────── <b>STORAGE</b> ────────────┐\n"
         f"│  💾 <b>Disk Usage:</b> <code>{stats['disk_usage']}%</code>\n"
+        f"│  📊 <b>Disk Free:</b>  <code>{stats.get('disk_free', 'N/A')}</code>\n"
         f"│  📊 <b>Disk Used:</b>  <code>{stats['disk_used']}</code> / <code>{stats['disk_total']}</code>\n"
         f"│  📂 <b>Downloads:</b>  <code>{stats.get('download_count', 0)}</code> files cached\n"
         f"└────────────────────────────────────┘\n\n"
@@ -783,7 +786,7 @@ async def callback_handler(client: Client, cb: CallbackQuery):
                 ],
                 [
                     InlineKeyboardButton(
-                        "👨‍💻 Developer", url="https://t.me/itsSmartDev"
+                        "👨‍💻 Developer", url="https://t.me/AftabKabir"
                     ),
                 ],
             ]
@@ -795,9 +798,10 @@ async def callback_handler(client: Client, cb: CallbackQuery):
         stats = await get_system_status()
         text = (
             f"{_box('📊  QUICK STATUS')}\n\n"
-            f"💻 <b>CPU:</b>  <code>{stats['cpu']}%</code>\n"
-            f"🧠 <b>RAM:</b>  <code>{stats['ram_usage']}%</code>\n"
-            f"💾 <b>Disk:</b> <code>{stats['disk_usage']}%</code>"
+            f"🖥️ <b>OS:</b>   <code>{stats.get('platform', 'N/A')} (v{stats.get('os_version', 'N/A')})</code>\n"
+            f"💻 <b>CPU:</b>  <code>{stats['cpu']}% (Phys: {stats.get('cpu_physical', 1)} | Log: {stats.get('cpu_logical', 1)})</code>\n"
+            f"🧠 <b>RAM:</b>  <code>{stats['ram_usage']}% (Free: {stats.get('ram_free', 'N/A')})</code>\n"
+            f"💾 <b>Disk:</b> <code>{stats['disk_usage']}% (Free: {stats.get('disk_free', 'N/A')})</code>"
         )
         await cb.message.edit_text(
             text,
