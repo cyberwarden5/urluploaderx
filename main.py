@@ -1489,11 +1489,20 @@ async def demote_command(client: Client, message: Message):
     await message.reply_text(f"✅ <b>Premium removed successfully for {target_name}.</b>", reply_to_message_id=message.id)
 
 
-# ─── Startup ──────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    logger.info("🚀 Starting URLUploader Bot v%s…", BOT_VERSION)
+    import glob
     for d in ("downloads", "temp", "data"):
         os.makedirs(d, exist_ok=True)
+
+    # Clean up stale session files in data folder
+    for session_file in glob.glob(os.path.join("data", "URLUploaderBot.session*")):
+        try:
+            os.remove(session_file)
+            logger.info("FreshStart │ Removed stale session file: %s", session_file)
+        except Exception as e:
+            logger.warning("FreshStart │ Failed to remove session file %s: %s", session_file, e)
+
+    logger.info("🚀 Starting URLUploader Bot v%s…", BOT_VERSION)
 
     async def main():
         # Pre-cleanup old downloads
