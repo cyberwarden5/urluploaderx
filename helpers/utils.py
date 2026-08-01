@@ -1,154 +1,285 @@
 import os
-import aiohttp
 import re
-import logging
 import time
-from pyrogram.types import Message
+import logging
+import platform
+import asyncio
+from typing import Optional, Any
 
-PROGRESS_BAR_TEMPLATE = """
-Percentage: {percentage}% | {current}/{total}
-Speed: {speed}/s | ETA: {eta}
-"""
+import aiohttp
+import psutil
 
-def progressArgs(action: str, message: Message, start_time):
-    return (
-        action,
-        message,
-        start_time,
-        PROGRESS_BAR_TEMPLATE,
-        '▓',
-        '░'
-    )
+logger = logging.getLogger("URLUploaderBot.Utils")
 
-async def async_download_file(url, filename, progress=None, progress_args=()):
-    """
-    Asynchronously download a file from a URL and save it locally.
-    """
-    download_directory = "downloads"
-    if not os.path.exists(download_directory):
-        os.makedirs(download_directory)
+DOWNLOAD_DIR = "downloads"
+CHUNK_SIZE = 2 * 1024 * 1024  # 2 MB chunks for faster throughput
 
-    file_path = os.path.join(download_directory, filename)
+PROGRESS_BAR_TEMPLATE = (
+    "⚡ <b>{action_title}</b>\n"
+    "╔═════════════════╗\n"
+    "║ {spin_frame}  <b>Progress:</b> <code>{percentage:.1f}%</code>\n"
+    "║ <code>[{bar}]</code>\n"
+    "║\n"
+    "║ 📦 <b>Done:</b> <code>{current}</code> / <code>{total}</code>\n"
+    "║ ⚡ <b>Speed:</b> <code>{speed}/s</code>\n"
+    "║ ⏳ <b>ETA:</b> <code>{eta}</code>\n"
+    "╚═════════════════╝"
+)
 
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status != 200:
-                raise Exception("Download failed.")
+SPIN_FRAMES = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+}
 
-            total_size = int(response.headers.get("content-length", 0))
-            downloaded_size = 0
+_last_edit: dict[int, float] = {}
+_spin_idx: dict[int, int] = {}
 
-            with open(file_path, "wb") as file:
-                async for chunk in response.content.iter_chunked(1024):
-                    file.write(chunk)
-                    downloaded_size += len(chunk)
-                    if progress:
-                        await progress(downloaded_size, total_size, *progress_args)
+# Module-level shared connector for connection pooling
+_shared_connector: Optional[aiohttp.TCPConnector] = None
 
+
+def _get_connector() -> aiohttp.TCPConnector:
+    global _shared_connector
+    if _shared_connector is None or _shared_connector.closed:
+        _shared_connector = aiohttp.TCPConnector(
+            limit=100,
+            limit_per_host=30,
+            ttl_dns_cache=600,
+            enable_cleanup_closed=True,
+        )
+    return _shared_connector
+
+
+async def cleanup_old_downloads(max_age_hours: int = 2) -> int:
+    """Remove download files older than max_age_hours. Returns count removed."""
+    removed = 0
+    if not os.path.isdir(DOWNLOAD_DIR):
+        return removed
+    cutoff = time.time() - (max_age_hours * 3600)
+    for fname in os.listdir(DOWNLOAD_DIR):
+        fpath = os.path.join(DOWNLOAD_DIR, fname)
+        try:
+            if os.path.isfile(fpath) and os.path.getmtime(fpath) < cutoff:
+                os.remove(fpath)
+                removed += 1
+        except OSError:
+            pass
+    if removed:
+        logger.info("Cleanup: removed %d old download(s)", removed)
+    return removed
+
+
+def progressArgs(
+    action: str, message: Any, start_time: float
+) -> tuple:
+    return (action, message, start_time, PROGRESS_BAR_TEMPLATE, "▰", "▱")
+
+
+async def async_download_file(
+    url: str,
+    filename: str,
+    progress=None,
+    progress_args: tuple = (),
+    temp_dir: Optional[str] = None,
+) -> str:
+    """High-speed async file downloader with 2 MB buffer chunks."""
+    download_dir = temp_dir or DOWNLOAD_DIR
+    os.makedirs(download_dir, exist_ok=True)
+    file_path = os.path.join(download_dir, filename)
+
+    timeout = aiohttp.ClientTimeout(total=None, connect=30, sock_read=120)
+    async with aiohttp.ClientSession(
+        connector=_get_connector(), timeout=timeout
+    ) as session:
+        async with session.get(url, headers=HEADERS, allow_redirects=True) as resp:
+            if resp.status != 200:
+                raise RuntimeError(f"HTTP {resp.status} — download failed for {url}")
+
+            total_size = int(resp.headers.get("content-length", 0))
+            downloaded = 0
+
+            with open(file_path, "wb") as fp:
+                async for chunk in resp.content.iter_chunked(CHUNK_SIZE):
+                    fp.write(chunk)
+                    downloaded += len(chunk)
+                    if progress and total_size > 0:
+                        await progress(downloaded, total_size, *progress_args)
+
+    logger.info("Download complete: %s (%d bytes)", file_path, downloaded)
     return file_path
 
-async def get_file_size(url):
-    """
-    Fetch the file size from a URL.
-    """
-    async with aiohttp.ClientSession() as session:
-        async with session.head(url) as response:
-            if response.status != 200:
-                raise Exception("Failed to fetch file size.")
-            return int(response.headers.get("content-length", 0))
 
-async def get_filename(url):
-    """
-    Extract the file name from a URL or its headers.
-    """
-    async with aiohttp.ClientSession() as session:
-        async with session.head(url) as response:
-            if response.status != 200:
-                raise Exception("Failed to fetch filename.")
-            disposition = response.headers.get("content-disposition", "")
-            match = re.findall(r'filename="(.+?)"', disposition)
-            return match[0] if match else os.path.basename(url)
+async def get_file_size(url: str) -> int:
+    """Fetch file size via HEAD (falls back to GET)."""
+    timeout = aiohttp.ClientTimeout(total=None, connect=15, sock_read=15)
+    async with aiohttp.ClientSession(
+        connector=_get_connector(), timeout=timeout
+    ) as session:
+        try:
+            async with session.head(url, headers=HEADERS, allow_redirects=True) as resp:
+                if resp.status == 200:
+                    return int(resp.headers.get("content-length", 0))
+        except Exception:
+            pass
+        async with session.get(url, headers=HEADERS, allow_redirects=True) as resp:
+            if resp.status == 200:
+                return int(resp.headers.get("content-length", 0))
+    return 0
 
-def file_size_format(size_in_bytes):
-    """
-    Format the file size into human-readable form.
-    """
-    size_name = ("B", "KB", "MB", "GB", "TB")
-    i = 0
-    while size_in_bytes >= 1024 and i < len(size_name) - 1:
-        size_in_bytes /= 1024.0
-        i += 1
-    return f"{size_in_bytes:.2f} {size_name[i]}"
 
-async def rename_file(downloaded_file, new_name):
-    """
-    Rename a downloaded file.
-    """
-    directory, _ = os.path.split(downloaded_file)
-    ext = os.path.splitext(downloaded_file)[1]
-    new_file_path = os.path.join(directory, f"{new_name}{ext}")
-    os.rename(downloaded_file, new_file_path)
-    return new_file_path
-
-async def upload_file(client, chat_id, file_path, as_document=False):
-    """
-    Upload a file to the specified chat.
-    """
+async def get_filename(url: str) -> str:
+    """Extract filename from URL or Content-Disposition header."""
+    timeout = aiohttp.ClientTimeout(total=None, connect=15, sock_read=15)
     try:
-        if as_document:
-            await client.send_document(chat_id, document=file_path)
-        else:
-            await client.send_video(chat_id, video=file_path)
-    except Exception as e:
-        logging.error(f"Error during file upload: {e}")
-        raise
+        async with aiohttp.ClientSession(
+            connector=_get_connector(), timeout=timeout
+        ) as session:
+            async with session.head(url, headers=HEADERS, allow_redirects=True) as resp:
+                disposition = resp.headers.get("content-disposition", "")
+                match = re.findall(r'filename="?([^";]+)"?', disposition)
+                if match:
+                    return match[0].strip()
+    except Exception:
+        pass
 
-async def convert_file(file_path, as_document=False):
-    """
-    Handle file conversion (document to video or vice versa).
-    """
-    if as_document:
-        converted_path = file_path
-    else:
-        converted_path = file_path  # Mock conversion logic; adjust if actual conversion is needed.
-    return converted_path
+    clean_url = url.split("?")[0].split("#")[0]
+    base = os.path.basename(clean_url)
+    if base and "." in base:
+        return base
+    return "file_download.bin"
 
-async def delete_file(file_path):
-    """
-    Safely delete a file from the system.
-    """
+
+def file_size_format(size_bytes: int) -> str:
+    if not size_bytes or size_bytes < 0:
+        return "0 B"
+    units = ("B", "KB", "MB", "GB", "TB")
+    size = float(size_bytes)
+    for unit in units:
+        if size < 1024:
+            return f"{size:.2f} {unit}"
+        size /= 1024.0
+    return f"{size:.2f} PB"
+
+
+async def delete_file(path: str) -> None:
     try:
-        os.remove(file_path)
-    except FileNotFoundError:
-        logging.warning(f"File not found: {file_path}")
-    except Exception as e:
-        logging.error(f"Error deleting file: {e}")
+        if path and os.path.isfile(path):
+            os.remove(path)
+            logger.debug("Deleted temp file: %s", path)
+    except OSError as e:
+        logger.warning("Failed to delete %s: %s", path, e)
 
-def estimate_time(start_time, current_size, total_size):
-    """
-    Estimate remaining time for a download or upload.
-    """
-    elapsed_time = time.time() - start_time
-    speed = current_size / elapsed_time if elapsed_time > 0 else 0
-    remaining_time = (total_size - current_size) / speed if speed > 0 else 0
-    return time.strftime("%H:%M:%S", time.gmtime(remaining_time)), speed
 
-async def progress(current, total, action, message, start_time, template, completed_symbol, pending_symbol):
-    """
-    Update the progress bar for file operations.
-    """
-    percentage = (current / total) * 100
-    completed_length = int(percentage / 10)
-    progress_bar = completed_symbol * completed_length + pending_symbol * (10 - completed_length)
-    elapsed_time, speed = estimate_time(start_time, current, total)
-    progress_text = template.format(
-        percentage=round(percentage, 2),
-        current=file_size_format(current),
-        total=file_size_format(total),
-        speed=file_size_format(speed),
-        eta=elapsed_time
-    )
+def _estimate_time(
+    start: float, current: int, total: int
+) -> tuple[str, float]:
+    elapsed = time.time() - start
+    speed = current / elapsed if elapsed > 0 else 0
+    remaining = (total - current) / speed if speed > 0 else 0
+    return time.strftime("%H:%M:%S", time.gmtime(remaining)), speed
+
+
+async def progress(
+    current: int,
+    total: int,
+    action: str,
+    message: Any,
+    start_time: float,
+    template: str,
+    completed_symbol: str,
+    pending_symbol: str,
+) -> None:
+    """Throttled progress bar edit (1.5 s interval)."""
+    if total <= 0:
+        return
+
+    msg_id = message.id
+    now = time.time()
+    if msg_id in _last_edit and (now - _last_edit[msg_id]) < 1.5 and current < total:
+        return
+    _last_edit[msg_id] = now
+
+    idx = _spin_idx.get(msg_id, 0)
+    spin_frame = SPIN_FRAMES[idx % len(SPIN_FRAMES)]
+    _spin_idx[msg_id] = idx + 1
+
+    pct = (current / total) * 100
+    filled = int((pct * 13) / 100)
+    bar = completed_symbol * filled + pending_symbol * (13 - filled)
+    eta_str, speed = _estimate_time(start_time, current, total)
+
     try:
-        await message.edit_text(f"**{action} Progress**\n\n{progress_text}\n[{progress_bar}]")
+        text = template.format(
+            action_title=action.upper(),
+            spin_frame=spin_frame,
+            percentage=pct,
+            bar=bar,
+            current=file_size_format(current),
+            total=file_size_format(total),
+            speed=file_size_format(speed),
+            eta=eta_str,
+        )
+        from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        kb = InlineKeyboardMarkup([[
+            InlineKeyboardButton("❌ Cancel Task", callback_data="cancel_task")
+        ]])
+        await message.edit_text(text, reply_markup=kb)
     except Exception as e:
-        logging.error(f"Error updating progress: {e}")
+        logger.error(f"Failed to edit progress status message: {e}")
+
+
+async def get_system_status() -> dict[str, Any]:
+    """Non-blocking system stats collection."""
+
+    def _collect() -> dict[str, Any]:
+        cpu = psutil.cpu_percent(interval=0.3)
+        cpu_count = psutil.cpu_count(logical=True)
+        ram = psutil.virtual_memory()
+        swap = psutil.swap_memory()
+        try:
+            drive = os.getenv("SystemDrive", "C:") + os.sep
+        except Exception:
+            drive = "/"
+        disk = psutil.disk_usage(drive)
+        # Count cached download files
+        dl_count = 0
+        if os.path.isdir(DOWNLOAD_DIR):
+            try:
+                dl_count = len([f for f in os.listdir(DOWNLOAD_DIR) if os.path.isfile(os.path.join(DOWNLOAD_DIR, f))])
+            except OSError:
+                pass
+        return {
+            "cpu": cpu,
+            "cpu_count": cpu_count,
+            "ram_usage": ram.percent,
+            "ram_used": file_size_format(ram.used),
+            "ram_total": file_size_format(ram.total),
+            "swap_usage": f"{swap.percent}% ({file_size_format(swap.used)} / {file_size_format(swap.total)})" if swap.total else "N/A",
+            "disk_usage": disk.percent,
+            "disk_used": file_size_format(disk.used),
+            "disk_total": file_size_format(disk.total),
+            "download_count": dl_count,
+            "python": platform.python_version(),
+            "platform": platform.system(),
+        }
+
+    return await asyncio.get_event_loop().run_in_executor(None, _collect)
+
+
+async def run_speedtest() -> dict[str, Any]:
+    """Runs speedtest-cli in a non-blocking thread executor."""
+    def _run():
+        import speedtest
+        s = speedtest.Speedtest()
+        s.get_best_server()
+        s.download(threads=None)
+        s.upload(threads=None)
+        results = s.results.dict()
+        return {
+            "download": results["download"],  # in bits/sec
+            "upload": results["upload"],      # in bits/sec
+            "ping": results["ping"],          # ms
+            "server": results["server"]["sponsor"] + " (" + results["server"]["name"] + ")",
+            "client": results["client"]["ip"] + " (" + results["client"]["isp"] + ")"
+        }
+    return await asyncio.get_event_loop().run_in_executor(None, _run)

@@ -1,74 +1,76 @@
-<h1 align="center">URLUploader Telegram Bot</h1>
+<h1 align="center">🚀 URLUploader Telegram Bot</h1>
 
 <p align="center">
   <a href="https://github.com/bisnuray/URLUploader/stargazers"><img src="https://img.shields.io/github/stars/bisnuray/URLUploader?color=blue&style=flat" alt="GitHub Repo stars"></a>
   <a href="https://github.com/bisnuray/URLUploader/issues"><img src="https://img.shields.io/github/issues/bisnuray/URLUploader" alt="GitHub issues"></a>
   <a href="https://github.com/bisnuray/URLUploader/pulls"><img src="https://img.shields.io/github/issues-pr/bisnuray/URLUploader" alt="GitHub pull requests"></a>
   <a href="https://github.com/bisnuray/URLUploader/graphs/contributors"><img src="https://img.shields.io/github/contributors/bisnuray/URLUploader?style=flat" alt="GitHub contributors"></a>
-  <a href="https://github.com/bisnuray/URLUploader/network/members"><img src="https://img.shields.io/github/forks/bisnuray/URLUploader?style=flat" alt="GitHub forks"></a>
 </p>
 
 <p align="center">
-  <em>URLUploader: An advanced Telegram bot script to download files from direct download URLs, check file sizes, rename files, and upload them with progress indicators directly to Telegram.</em>
+  <em>URLUploader: An advanced, high-performance Telegram bot script to download files from direct download URLs, extract video screenshot collages, check file sizes, rename files, and log activity with progress indicators.</em>
 </p>
 <hr>
 
-## ✨ Features
+## ✨ Key Features
 
-- 📥 Download files from direct download URLs and upload them to Telegram.
-- 📊 Shows download and upload progress using custom handlers.
-- ✏️ Rename Option: Allows renaming the file before uploading.
+- 📥 **Direct URL Upload:** Download direct HTTP/HTTPS files (up to 4GB) and upload directly to Telegram as Video or Document.
+- 🎬 **Video Screenshot Generator (`/ss`):** Extract timestamped video screenshot frames (default 10) and generate an aesthetic grid collage from video files or video URLs!
+- 👤 **Automatic User Registration:** Persistent JSON storage in `data/users.json` tracking all bot users.
+- 📜 **Log Channel Integration:** Automatically logs all user activities, commands, registrations, and errors to your private Telegram `LOG_CHANNEL`.
+- 💻 **Owner Dashboard (`/status`):** View real-time system performance (CPU %, RAM, Storage, Bot Uptime, and Ping latency).
+- ⚡ **Multi-threaded Performance:** Asynchronous media handling and throttled progress bars to avoid Telegram flood limits.
+- ✏️ **File Renaming:** Rename any file prior to downloading and uploading.
 
-## Requirements
+---
 
-Before you begin, ensure you have met the following requirements:
+## 🛠️ Quick Start
 
-- Python 3.8 or higher.
-- `pyrofork`, `tgcrypto`, `pyleaves` and `aiohttp` libraries.
-- A Telegram bot token (you can get one from [@BotFather](https://t.me/BotFather) on Telegram).
-- API ID and Hash: You can get these by creating an application on [my.telegram.org](https://my.telegram.org).
-- To Get `SESSION_STRING` Open [@SmartUtilBot](https://t.me/SmartUtilBot). Bot and use /pyro command and then follow all instructions.
-
-## Installation
-
-To install `pyrofork`, `tgcrypto`, `pyleaves` and `aiohttp` run the following command:
-
+### 1. Install Dependencies
 ```bash
-pip install pyrofork tgcrypto pyleaves aiohttp
+pip install -r requirements.txt
 ```
 
-**Note: If you previously installed `pyrogram`, uninstall it before installing `pyrofork`.**
-
-## Configuration
-
-1. Open the `config.py` file in your favorite text editor.
-2. Replace the placeholders for `API_ID`, `API_HASH`, `SESSION_STRING`, and `BOT_TOKEN` with your actual values:
-   - **`API_ID`**: Your API ID from [my.telegram.org](https://my.telegram.org).
-   - **`API_HASH`**: Your API Hash from [my.telegram.org](https://my.telegram.org).
-   - **`SESSION_STRING`**: The session string generated using [@SmartUtilBot](https://t.me/SmartUtilBot).
-   - **`BOT_TOKEN`**: The token you obtained from [@BotFather](https://t.me/BotFather).
-
-## Deploy the Bot
-
-```sh
-git clone https://github.com/bisnuray/URLUploader
-cd URLUploader
-python uploder.py
+### 2. Configure `.env`
+Create a `.env` file in the root folder:
+```env
+API_ID=28271744
+API_HASH=1df4d2b4dc77dc5fd65622f9d8f6814d
+BOT_TOKEN=your_bot_token_here
+OWNER_ID=7647902709
+LOG_CHANNEL=-1003336496391
 ```
 
-## Usage
+### 3. Start Bot
+```bash
+python main.py
+```
 
-Send a URL to the bot in a private message. If the file is valid and within the size limit, the bot will present two options:
+---
 
-- **Default:** Download and upload the file with its original name.
-- **Rename:** Allows you to specify a new filename before upload.
-- **Download Progress:** While downloading and uploading, progress messages display current status.
+## 📖 Command Reference
 
-✨ **Note**: If you found this repo helpful, please fork and star it. Also, feel free to share with proper credit!
+### User Commands
+- `/start` - Check registration status and view welcome menu.
+- `/help` - View usage guide and options.
+- `/ss [count]` - Generate video screenshots & grid collage (Reply to video message or direct video link).
+- `/status` - View live server metrics, ping, CPU, RAM, and Disk storage.
 
-## Author
+### Owner-Only Commands
+- `/ping` - Measure bot ping latency.
+- `/speedtest` - Run speedtest metric.
+- `/files` - Manage downloaded files.
+- `/promote` - Promote a user to Premium (allows up to `PREMIUM_LIMIT` concurrent downloads).
+- `/demote` - Revoke premium status.
+- `/ban` - Ban a user.
+- `/unban` - Unban a user.
+- `/logs` - Get bot log.txt file.
+- `/restart` - Restart bot process.
+- `/shell` - Run shell command.
 
-- Name: Bisnu Ray
-- Telegram: [@itsSmartDev](https://t.me/itsSmartDev)
+---
 
-Feel free to reach out if you have any questions or feedback.
+## 👥 Author & Credits
+
+- **Name:** Bisnu Ray
+- **Telegram Channel:** [@itsSmartDev](https://t.me/itsSmartDev)

@@ -1,0 +1,28 @@
+# Environment and Secrets
+.env
+*.env
+
+# Python Cache & Virtual Environments
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+ENV/
+
+# Data & Downloads
+data/*.json
+downloads/
+temp/
+*.session
+*.session-journal
+
+# Logs
+bot.log
+*.log
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
